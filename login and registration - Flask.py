@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template,json, url_for
 from flask_restful import reqparse, Resource, Api
 import json
 
@@ -8,34 +8,34 @@ api = Api(app)
 
 parser = reqparse.RequestParser()
 
-USERS = {
-    {"username": "martinek", "password": "123456789"},
-    {"username": "adamek", "password": "2356897"},
-    {"username": "kolobrnda", "password": "1245789"},
-}
+USERS ={
+    "1": {"username": "martinek", "password": "123456789"},
+    "2":{"username": "adamek", "password": "2356897"},
+    "3": {"username": "kolobrnda", "password": "1245789"},
+    }
 
 
 class UserList(Resource):
 
-    @property
+    def load(self):
+        json_data = open(url_for("static", filename= "data/ID.json"))
+        data = json.load(json_data)
+        return render_template("ID.json", data = data)
+
     def get(self):
-        with open("ID.json", "r") as file:
-            data = file.read()
-            object = json.loads(data)
-            print(object)
-            return users
+        return USERS
 
     def post(self):
         parser.add_argument("username")
-        parser.add_argument("pasSword")
+        parser.add_argument("password")
         args = parser.parse_args()
-        user_id = int(max(users.keys())) + 1
+        user_id = int(max(USERS.keys())) + 1
         user_id = "%i" % user_id
-        Users[user_id] = {
+        USERS[user_id] = {
             "username": args["username"],
             "password": args["password"]
         }
-        return users[user_id], 201
+        return USERS[user_id], 201
 
 
 class User(Resource):
@@ -43,24 +43,35 @@ class User(Resource):
         if user_id not in USERS:
             return "not Found", 404
         else:
-            return user[user_id]
+            return USERS[user_id]
 
-    def put(self, user_id):
+    def put(self, user_id, json_data):
         parser.add_argument("username")
-        parser.add_argument("password")
+        parser.add_argument("password1")
+        parser.add_argument("pasword2")
         args = parser.parse_args()
-        if user_id not in USERS:
+        if user_id in USERS:
             return "record not Found", 404
         else:
-            user = users[user_id]
+            user = USERS[user_id]
             user["username"] = args["username"] if args["username"] is not None else user["username"]
-            user["password"] = args["password"] if args["password"] is not None else user["password"]
+            user["password1"] = args["password1"] if args["password1"] is not None else user["password1"]
+            user["password2"] = args["password2"] if args["password2"] is not None else user["password2"]
+            if ["pasword1"] != ["pasword2"]:
+                return user, 404
+            else:
+                 with open("ID.json","w") as file:
+                    a = {"username":["username"], "pasword": ["pasword1"]}
+                    print(json_data["users"])
+                    json_data["users"].append(a)
+                    print(json_data["users"])
+                    json.dump(json_data, file, indent= 2 )
 
     def delete(self, user_id):
         if user_id not in USERS:
             return "not found", 404
         else:
-            del USE[user_id]
+            del USERS[user_id]
             return "", 204
 
 
