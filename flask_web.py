@@ -1,32 +1,79 @@
-from flask import Flask, request, make_response, render_template, redirect, url_for
-
+import os
+from flask import Flask, request, render_template, Response,send_from_directory,jsonify
+import pandas as pd
+import uuid
 
 app = Flask(__name__, template_folder= "templates")
-@app.route("/")
+@app.route("/", methods=['GET','POST'])
 def index():
-    mylist = [10, 20, 30, 40, 50]
-    return render_template("index.html", mylist = mylist)
+    if request.method == 'GET' :
+        return render_template("index.html")
+    elif request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
 
-@app.route("/Other")
-def Other():
-    some_text = "hello World"
-    return render_template("other.html", some_text = some_text)
+        if username == 'neuralnine' and password == 'password':
+            return 'success'
+        else:
+            return 'Failure'
+        
+@app.route('/file_upload', methods = ['POST'])
+def file_upload():
+    file = request.files['file']
 
-@app.route('/redirect_endpoint')
-def redirect_endpoint():
-    return redirect(url_for('Other'))
+    if file.content_type == 'text/plain':
+        return file.read().decode()
+    elif file.content_type =='application/vnd.openxmlfomats-officedokument.spreadsheetml.sheet' or file.content_type == 'application/vnd.ms-excel':
+        df = pd.read_excel(file)
+        return df.html
 
-@app.template_filter("revers_string")   
-def revers_string(s):
-    return s[::-1]
+@app.route('/conver_csv', methods = ['POST'])
+def convert_csv():
+    file = request.files['file']
+    
+    df = pd.read_excel(file)
 
-@app.template_filter("repeat")
-def repeat (s, times= 2):
-    return s * times
+    response = Response(
+        df.to_csv(),
+        mimetype= 'text/csv',
+        headers={
+            'Content-Disposition': 'atachment ; filename = result.csv '
+        }
+    )
+    
+    return response
 
-@app.template_filter("alternate_case")
-def alternate_case(s):
-    return ''.join([c.upper()if i % 2 ==0 else c.lower()for i, c in enumerate(s)])
+
+@app.route('/conver_csv_two', methods = ['POST'])
+def convert_csv_two():
+    file = request.files['file']
+
+    df = pd.read_excel(file)
+
+    if not os.path.exists('downloads'):
+        os.makedirs('downloads')
+
+    filename = f'{uuid.uuid4()}.csv'
+    df.to_csv(os.path.join('dowlands', filename))
+
+    return render_template('download.html',filename =filename)
+
+@app.route('/download/<filename>')
+def download(filename):
+    return send_from_directory('downloads', filename, download_name = 'result.csv')
+
+@app.route('/handle_post', methods = ['POST'])
+def handle_post():
+    greating = request.json['greating']
+    name = request.json['name']
+
+    with open('file.txt','w') as f:
+        f.write(f'{greating}',f'{name}')
+    
+    return jsonify({'message':'Successfully written'})
+
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port= 5555, debug= True)
